@@ -4,41 +4,14 @@
     <meta charset="UTF-8">
     <title>Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
 <div class="container">
-    <h2>Bem-vindo, {{ nome }}</h2>
-
+    <h2>Bem-vindo, {{ nome }}!</h2>
     <a href="{{ url_for('cadastrar_jovem') }}" class="btn">Cadastrar Jovem</a>
     <a href="{{ url_for('listar_jovens') }}" class="btn">Ver Lista de Jovens</a>
     <a href="{{ url_for('logout') }}" class="btn logout">Sair</a>
-
-    {% if jovens %}
-    <table>
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>Telefone</th>
-                <th>Email</th>
-                <th>Endereço</th>
-                <th>Data Nascimento</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for jovem in jovens %}
-            <tr>
-                <td data-label="Nome">{{ jovem['nome'] }}</td>
-                <td data-label="Telefone">{{ jovem['telefone'] }}</td>
-                <td data-label="Email">{{ jovem['email'] }}</td>
-                <td data-label="Endereço">{{ jovem['endereco'] }}</td>
-                <td data-label="Data Nascimento">{{ jovem['data_nascimento'] }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>Nenhum jovem cadastrado ainda.</p>
-    {% endif %}
 </div>
 </body>
 </html>
