@@ -7,31 +7,29 @@
 </head>
 <body>
     <div class="container">
-        <h2>Cadastrar Jovem</h2>
-
+        <h1>Cadastrar Jovem</h1>
         <form method="POST" action="{{ url_for('cadastrar_jovem') }}">
-            <label for="nome">Nome</label>
-            <input type="text" id="nome" name="nome" placeholder="Digite o nome" required>
+            <label for="nome">Nome:</label>
+            <input type="text" name="nome" required><br>
 
-            <label for="telefone">Telefone</label>
-            <input type="text" id="telefone" name="telefone" placeholder="Digite o telefone">
+            <label for="telefone">Telefone:</label>
+            <input type="text" name="telefone"><br>
 
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" placeholder="Digite o email">
+            <label for="email">Email:</label>
+            <input type="email" name="email"><br>
 
-            <label for="endereco">Endereço</label>
-            <input type="text" id="endereco" name="endereco" placeholder="Digite o endereço">
+            <label for="endereco">Endereço:</label>
+            <input type="text" name="endereco"><br>
 
-            <label for="data_nascimento">Data de Nascimento</label>
-            <input type="date" id="data_nascimento" name="data_nascimento">
+            <label for="data_nascimento">Data de Nascimento:</label>
+            <input type="date" name="data_nascimento"><br>
 
-            <button type="submit">Cadastrar</button>
+            <button type="submit" class="btn">Cadastrar</button>
         </form>
 
-        <div class="links">
-            <a href="{{ url_for('dashboard') }}">Voltar ao Dashboard</a>
-            <a href="{{ url_for('logout') }}">Sair</a>
-        </div>
+        <a href="{{ url_for('dashboard') }}" class="btn">Voltar ao Dashboard</a>
+        <a href="{{ url_for('listar_jovens') }}" class="btn">Ver Lista de Jovens</a>
+        <a href="{{ url_for('logout') }}" class="btn">Sair</a>
     </div>
 </body>
 </html>
