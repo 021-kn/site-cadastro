@@ -26,7 +26,7 @@ body {
 /* Títulos */
 h2, h3 {
     margin-bottom: 20px;
-    color: #4B0082; /* Roxo */
+    color: #4B0082;
     text-align: center;
 }
 
@@ -79,10 +79,11 @@ form label {
     margin: 10px 0 5px;
 }
 
-form input, form select {
+form input, form select, form button {
     padding: 10px;
     border-radius: 5px;
     border: 1px solid #ccc;
+    font-size: 1em;
 }
 
 /* Tabelas */
@@ -107,6 +108,12 @@ table tr:nth-child(even) {
     background-color: #f9f9f9;
 }
 
+/* Ações dentro da tabela */
+.actions {
+    display: flex;
+    gap: 5px;
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
     .container {
@@ -116,29 +123,35 @@ table tr:nth-child(even) {
 
     table, thead, tbody, th, td, tr {
         display: block;
+        width: 100%;
     }
 
     table tr {
         margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 10px;
     }
 
     table td {
         text-align: right;
         padding-left: 50%;
         position: relative;
+        border: none;
+        border-bottom: 1px solid #eee;
     }
 
     table td::before {
         content: attr(data-label);
         position: absolute;
         left: 10px;
-        width: calc(50% - 20px);
+        width: 45%;
         font-weight: bold;
         text-align: left;
+        color: #4B0082;
     }
 
     .actions {
-        display: flex;
         flex-direction: column;
         align-items: stretch;
     }
@@ -147,5 +160,26 @@ table tr:nth-child(even) {
         width: 100%;
         text-align: center;
         margin: 5px 0;
+    }
+}
+
+/* Para telas bem pequenas */
+@media (max-width: 480px) {
+    .container {
+        padding: 10px;
+    }
+
+    h2, h3 {
+        font-size: 1.3em;
+    }
+
+    form input, form select, form button {
+        font-size: 0.95em;
+        padding: 8px;
+    }
+
+    .btn {
+        padding: 8px;
+        font-size: 0.9em;
     }
 }
