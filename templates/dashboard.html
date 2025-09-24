@@ -6,40 +6,39 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h2>Bem-vindo, {{ nome }}</h2>
+<div class="container">
+    <h2>Bem-vindo, {{ nome }}</h2>
 
-        <a href="{{ url_for('cadastrar_jovem') }}" class="btn">Cadastrar Jovem</a>
-        <a href="{{ url_for('listar_jovens') }}" class="btn">Ver Lista de Jovens</a>
-        <a href="{{ url_for('logout') }}" class="btn">Sair</a>
+    <a href="{{ url_for('cadastrar_jovem') }}" class="btn">Cadastrar Jovem</a>
+    <a href="{{ url_for('listar_jovens') }}" class="btn">Ver Lista de Jovens</a>
+    <a href="{{ url_for('logout') }}" class="btn logout">Sair</a>
 
-        {% if jovens %}
-            <h3>Jovens Cadastrados:</h3>
-            <table style="width:100%; border-collapse: collapse;">
-                <thead>
-                    <tr>
-                        <th style="border:1px solid #ddd; padding:8px;">Nome</th>
-                        <th style="border:1px solid #ddd; padding:8px;">Telefone</th>
-                        <th style="border:1px solid #ddd; padding:8px;">Email</th>
-                        <th style="border:1px solid #ddd; padding:8px;">Endereço</th>
-                        <th style="border:1px solid #ddd; padding:8px;">Nascimento</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for jovem in jovens %}
-                    <tr>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.nome }}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.telefone }}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.email }}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.endereco }}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.data_nascimento }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>Nenhum jovem cadastrado ainda.</p>
-        {% endif %}
-    </div>
+    {% if jovens %}
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Telefone</th>
+                <th>Email</th>
+                <th>Endereço</th>
+                <th>Data Nascimento</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for jovem in jovens %}
+            <tr>
+                <td data-label="Nome">{{ jovem['nome'] }}</td>
+                <td data-label="Telefone">{{ jovem['telefone'] }}</td>
+                <td data-label="Email">{{ jovem['email'] }}</td>
+                <td data-label="Endereço">{{ jovem['endereco'] }}</td>
+                <td data-label="Data Nascimento">{{ jovem['data_nascimento'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Nenhum jovem cadastrado ainda.</p>
+    {% endif %}
+</div>
 </body>
 </html>
