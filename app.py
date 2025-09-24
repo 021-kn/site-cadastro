@@ -41,6 +41,17 @@ def init_db():
 
 init_db()
 
+# -------------------- DECORATOR LOGIN REQUIRED --------------------
+def login_required(f):
+    from functools import wraps
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if "usuario" not in session:
+            flash("Você precisa estar logado!")
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return wrap
+
 # -------------------- LOGIN --------------------
 @app.route("/", methods=["GET", "POST"])
 def login():
@@ -64,7 +75,6 @@ def login():
                 flash("Senha incorreta!")
         else:
             flash("Usuário não encontrado!")
-
     return render_template("login.html")
 
 # -------------------- REGISTER --------------------
@@ -86,14 +96,12 @@ def register():
             flash("E-mail já cadastrado!")
         finally:
             conn.close()
-
     return render_template("register.html")
 
 # -------------------- DASHBOARD --------------------
 @app.route("/dashboard")
+@login_required
 def dashboard():
-    if "usuario" not in session:
-        return redirect(url_for("login"))
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM jovens")
@@ -106,17 +114,6 @@ def dashboard():
 def logout():
     session.clear()
     return redirect(url_for("login"))
-
-# -------------------- DECORATOR LOGIN REQUIRED --------------------
-def login_required(f):
-    from functools import wraps
-    @wraps(f)
-    def wrap(*args, **kwargs):
-        if "usuario" not in session:
-            flash("Você precisa estar logado!")
-            return redirect(url_for("login"))
-        return f(*args, **kwargs)
-    return wrap
 
 # -------------------- CADASTRO DE JOVENS --------------------
 @app.route("/cadastrar_jovem", methods=["GET", "POST"])
@@ -139,7 +136,7 @@ def cadastrar_jovem():
         conn.close()
 
         flash("Jovem cadastrado com sucesso!")
-        return redirect(url_for("listar_jovens"))
+        return redirect(url_for("dashboard"))
 
     return render_template("cadastrar_jovem.html")
 
@@ -153,6 +150,52 @@ def listar_jovens():
     jovens = cursor.fetchall()
     conn.close()
     return render_template("listar_jovens.html", jovens=jovens)
+
+# -------------------- EDITAR JOVEM --------------------
+@app.route("/editar_jovem/<int:id>", methods=["GET", "POST"])
+@login_required
+def editar_jovem(id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM jovens WHERE id=?", (id,))
+    jovem = cursor.fetchone()
+
+    if not jovem:
+        conn.close()
+        flash("Jovem não encontrado!")
+        return redirect(url_for("listar_jovens"))
+
+    if request.method == "POST":
+        nome = request.form["nome"]
+        telefone = request.form["telefone"]
+        email = request.form["email"]
+        endereco = request.form["endereco"]
+        data_nascimento = request.form["data_nascimento"]
+
+        cursor.execute("""
+            UPDATE jovens
+            SET nome=?, telefone=?, email=?, endereco=?, data_nascimento=?
+            WHERE id=?
+        """, (nome, telefone, email, endereco, data_nascimento, id))
+        conn.commit()
+        conn.close()
+        flash("Jovem atualizado com sucesso!")
+        return redirect(url_for("listar_jovens"))
+
+    conn.close()
+    return render_template("editar_jovem.html", jovem=jovem)
+
+# -------------------- EXCLUIR JOVEM --------------------
+@app.route("/excluir_jovem/<int:id>")
+@login_required
+def excluir_jovem(id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM jovens WHERE id=?", (id,))
+    conn.commit()
+    conn.close()
+    flash("Jovem excluído com sucesso!")
+    return redirect(url_for("listar_jovens"))
 
 # -------------------- RODAR APP --------------------
 if __name__ == "__main__":
