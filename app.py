@@ -1,17 +1,18 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import os
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "fallback123")
 
-DB_NAME = "database.db"
+# URL do banco do Render (coloque essa variável no painel do Render)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # -------------------- BANCO DE DADOS --------------------
 def get_db_connection():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL, sslmode="require")
     return conn
 
 def init_db():
@@ -19,7 +20,7 @@ def init_db():
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             nome TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
             senha TEXT NOT NULL,
@@ -28,7 +29,7 @@ def init_db():
     """)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS jovens (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             nome TEXT NOT NULL,
             telefone TEXT,
             email TEXT,
@@ -37,6 +38,7 @@ def init_db():
         )
     """)
     conn.commit()
+    cursor.close()
     conn.close()
 
 init_db()
@@ -60,8 +62,8 @@ def login():
         senha = request.form["senha"]
 
         conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT senha, nome FROM usuarios WHERE email=?", (email,))
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cursor.execute("SELECT senha, nome FROM usuarios WHERE email=%s", (email,))
         usuario = cursor.fetchone()
         conn.close()
 
@@ -88,13 +90,14 @@ def register():
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)", (nome, email, senha))
+            cursor.execute("INSERT INTO usuarios (nome, email, senha) VALUES (%s, %s, %s)", (nome, email, senha))
             conn.commit()
             flash("Cadastro realizado com sucesso!")
             return redirect(url_for("login"))
         except:
             flash("E-mail já cadastrado!")
         finally:
+            cursor.close()
             conn.close()
     return render_template("register.html")
 
@@ -103,9 +106,10 @@ def register():
 @login_required
 def dashboard():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     cursor.execute("SELECT * FROM jovens")
     jovens = cursor.fetchall()
+    cursor.close()
     conn.close()
     return render_template("dashboard.html", nome=session["nome"], jovens=jovens)
 
@@ -130,9 +134,10 @@ def cadastrar_jovem():
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO jovens (nome, telefone, email, endereco, data_nascimento)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """, (nome, telefone, email, endereco, data_nascimento))
         conn.commit()
+        cursor.close()
         conn.close()
 
         flash("Jovem cadastrado com sucesso!")
@@ -145,9 +150,10 @@ def cadastrar_jovem():
 @login_required
 def listar_jovens():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     cursor.execute("SELECT * FROM jovens")
     jovens = cursor.fetchall()
+    cursor.close()
     conn.close()
     return render_template("listar_jovens.html", jovens=jovens)
 
@@ -156,11 +162,12 @@ def listar_jovens():
 @login_required
 def editar_jovem(id):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM jovens WHERE id=?", (id,))
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute("SELECT * FROM jovens WHERE id=%s", (id,))
     jovem = cursor.fetchone()
 
     if not jovem:
+        cursor.close()
         conn.close()
         flash("Jovem não encontrado!")
         return redirect(url_for("listar_jovens"))
@@ -174,14 +181,16 @@ def editar_jovem(id):
 
         cursor.execute("""
             UPDATE jovens
-            SET nome=?, telefone=?, email=?, endereco=?, data_nascimento=?
-            WHERE id=?
+            SET nome=%s, telefone=%s, email=%s, endereco=%s, data_nascimento=%s
+            WHERE id=%s
         """, (nome, telefone, email, endereco, data_nascimento, id))
         conn.commit()
+        cursor.close()
         conn.close()
         flash("Jovem atualizado com sucesso!")
         return redirect(url_for("listar_jovens"))
 
+    cursor.close()
     conn.close()
     return render_template("editar_jovem.html", jovem=jovem)
 
@@ -191,8 +200,9 @@ def editar_jovem(id):
 def excluir_jovem(id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM jovens WHERE id=?", (id,))
+    cursor.execute("DELETE FROM jovens WHERE id=%s", (id,))
     conn.commit()
+    cursor.close()
     conn.close()
     flash("Jovem excluído com sucesso!")
     return redirect(url_for("listar_jovens"))
