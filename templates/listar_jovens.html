@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Jovens Cadastrados</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Jovens Cadastrados</h2>
+
+        {% if jovens %}
+            <table style="width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th style="border:1px solid #ddd; padding:8px;">Nome</th>
+                        <th style="border:1px solid #ddd; padding:8px;">Telefone</th>
+                        <th style="border:1px solid #ddd; padding:8px;">Email</th>
+                        <th style="border:1px solid #ddd; padding:8px;">Endereço</th>
+                        <th style="border:1px solid #ddd; padding:8px;">Nascimento</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for jovem in jovens %}
+                    <tr>
+                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem[1] }}</td>
+                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem[2] }}</td>
+                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem[3] }}</td>
+                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem[4] }}</td>
+                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem[5] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Nenhum jovem cadastrado ainda.</p>
+        {% endif %}
+
+        <a href="{{ url_for('dashboard') }}">Voltar ao Dashboard</a>
+        <a href="{{ url_for('logout') }}">Sair</a>
+    </div>
+</body>
+</html>
