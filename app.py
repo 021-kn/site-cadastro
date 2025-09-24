@@ -1,115 +1,160 @@
-import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
+import sqlite3
+import os
 
 app = Flask(__name__)
-app.secret_key = "segredo-super-forte"
+app.secret_key = os.getenv("SECRET_KEY", "fallback123")
 
 DB_NAME = "database.db"
 
-# Inicializa o banco
+# -------------------- BANCO DE DADOS --------------------
+def get_db_connection():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 def init_db():
-    with sqlite3.connect(DB_NAME) as conn:
-        c = conn.cursor()
-        c.execute('''CREATE TABLE IF NOT EXISTS users (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        nome TEXT NOT NULL,
-                        email TEXT UNIQUE NOT NULL,
-                        senha TEXT NOT NULL
-                    )''')
-        c.execute('''CREATE TABLE IF NOT EXISTS jovens (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        nome TEXT NOT NULL,
-                        telefone TEXT,
-                        email TEXT,
-                        endereco TEXT,
-                        data_nascimento TEXT
-                    )''')
-        conn.commit()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            senha TEXT NOT NULL,
+            data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS jovens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            telefone TEXT,
+            email TEXT,
+            endereco TEXT,
+            data_nascimento TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
 
 init_db()
 
-# ---------- ROTAS ----------
-@app.route("/")
-def index():
-    return render_template("index.html")
+# -------------------- LOGIN --------------------
+@app.route("/", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form["email"]
+        senha = request.form["senha"]
 
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT senha, nome FROM usuarios WHERE email=?", (email,))
+        usuario = cursor.fetchone()
+        conn.close()
+
+        if usuario:
+            senha_armazenada, nome = usuario
+            if check_password_hash(senha_armazenada, senha):
+                session["usuario"] = email
+                session["nome"] = nome
+                return redirect(url_for("dashboard"))
+            else:
+                flash("Senha incorreta!")
+        else:
+            flash("Usuário não encontrado!")
+
+    return render_template("login.html")
+
+# -------------------- REGISTER --------------------
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
         nome = request.form["nome"]
         email = request.form["email"]
         senha = generate_password_hash(request.form["senha"])
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
         try:
-            with sqlite3.connect(DB_NAME) as conn:
-                c = conn.cursor()
-                c.execute("INSERT INTO users (nome, email, senha) VALUES (?, ?, ?)", (nome, email, senha))
-                conn.commit()
-            flash("Usuário cadastrado com sucesso!", "success")
+            cursor.execute("INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)", (nome, email, senha))
+            conn.commit()
+            flash("Cadastro realizado com sucesso!")
             return redirect(url_for("login"))
         except:
-            flash("E-mail já cadastrado!", "danger")
+            flash("E-mail já cadastrado!")
+        finally:
+            conn.close()
+
     return render_template("register.html")
 
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        email = request.form["email"]
-        senha = request.form["senha"]
-        with sqlite3.connect(DB_NAME) as conn:
-            c = conn.cursor()
-            c.execute("SELECT id, nome, senha FROM users WHERE email = ?", (email,))
-            user = c.fetchone()
-        if user and check_password_hash(user[2], senha):
-            session["user_id"] = user[0]
-            session["nome"] = user[1]
-            return redirect(url_for("dashboard"))
-        else:
-            flash("E-mail ou senha inválidos!", "danger")
-    return render_template("login.html")
-
-@app.route("/dashboard", methods=["GET", "POST"])
+# -------------------- DASHBOARD --------------------
+@app.route("/dashboard")
 def dashboard():
-    if "user_id" not in session:
+    if "usuario" not in session:
         return redirect(url_for("login"))
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM jovens")
+    jovens = cursor.fetchall()
+    conn.close()
+    return render_template("dashboard.html", nome=session["nome"], jovens=jovens)
 
+# -------------------- LOGOUT --------------------
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+# -------------------- DECORATOR LOGIN REQUIRED --------------------
+def login_required(f):
+    from functools import wraps
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if "usuario" not in session:
+            flash("Você precisa estar logado!")
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return wrap
+
+# -------------------- CADASTRO DE JOVENS --------------------
+@app.route("/cadastrar_jovem", methods=["GET", "POST"])
+@login_required
+def cadastrar_jovem():
     if request.method == "POST":
         nome = request.form["nome"]
         telefone = request.form["telefone"]
         email = request.form["email"]
         endereco = request.form["endereco"]
-        nascimento = request.form["data_nascimento"]
-        with sqlite3.connect(DB_NAME) as conn:
-            c = conn.cursor()
-            c.execute("INSERT INTO jovens (nome, telefone, email, endereco, data_nascimento) VALUES (?, ?, ?, ?, ?)",
-                      (nome, telefone, email, endereco, nascimento))
-            conn.commit()
-        flash("Jovem cadastrado com sucesso!", "success")
+        data_nascimento = request.form["data_nascimento"]
 
-    with sqlite3.connect(DB_NAME) as conn:
-        c = conn.cursor()
-        c.execute("SELECT * FROM jovens")
-        jovens = c.fetchall()
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO jovens (nome, telefone, email, endereco, data_nascimento)
+            VALUES (?, ?, ?, ?, ?)
+        """, (nome, telefone, email, endereco, data_nascimento))
+        conn.commit()
+        conn.close()
 
-    return render_template("dashboard.html", jovens=jovens)
+        flash("Jovem cadastrado com sucesso!")
+        return redirect(url_for("listar_jovens"))
 
+    return render_template("cadastrar_jovem.html")
+
+# -------------------- LISTAR JOVENS --------------------
 @app.route("/listar_jovens")
+@login_required
 def listar_jovens():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    with sqlite3.connect(DB_NAME) as conn:
-        c = conn.cursor()
-        c.execute("SELECT * FROM jovens")
-        jovens = c.fetchall()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM jovens")
+    jovens = cursor.fetchall()
+    conn.close()
     return render_template("listar_jovens.html", jovens=jovens)
 
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("index"))
-
+# -------------------- RODAR APP --------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
