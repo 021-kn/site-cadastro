@@ -7,11 +7,15 @@
 </head>
 <body>
     <div class="container">
-        <h1>Dashboard</h1>
+        <h2>Bem-vindo, {{ nome }}</h2>
 
-        <h2>Jovens Cadastrados</h2>
+        <a href="{{ url_for('cadastrar_jovem') }}" class="btn">Cadastrar Jovem</a>
+        <a href="{{ url_for('listar_jovens') }}" class="btn">Ver Lista de Jovens</a>
+        <a href="{{ url_for('logout') }}" class="btn">Sair</a>
+
         {% if jovens %}
-            <table style="width:100%; border-collapse: collapse; margin-top: 20px;">
+            <h3>Jovens Cadastrados:</h3>
+            <table style="width:100%; border-collapse: collapse;">
                 <thead>
                     <tr>
                         <th style="border:1px solid #ddd; padding:8px;">Nome</th>
@@ -24,11 +28,11 @@
                 <tbody>
                     {% for jovem in jovens %}
                     <tr>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem[1] }}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem[2] }}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem[3] }}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem[4] }}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem[5] }}</td>
+                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.nome }}</td>
+                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.telefone }}</td>
+                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.email }}</td>
+                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.endereco }}</td>
+                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.data_nascimento }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -36,12 +40,6 @@
         {% else %}
             <p>Nenhum jovem cadastrado ainda.</p>
         {% endif %}
-
-        <div style="margin-top:20px;">
-            <a href="{{ url_for('cadastrar_jovem') }}" class="btn">Cadastrar Jovem</a>
-            <a href="{{ url_for('listar_jovens') }}" class="btn">Ver Lista Completa</a>
-            <a href="{{ url_for('logout') }}" class="btn">Sair</a>
-        </div>
     </div>
 </body>
 </html>
