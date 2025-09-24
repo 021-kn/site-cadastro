@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Jovem</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="container">
+        <h2>Editar Jovem</h2>
+
+        <form method="POST" class="form-container">
+            <label for="nome">Nome:</label>
+            <input type="text" id="nome" name="nome" value="{{ jovem['nome'] }}" required>
+
+            <label for="telefone">Telefone:</label>
+            <input type="text" id="telefone" name="telefone" value="{{ jovem['telefone'] }}">
+
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" value="{{ jovem['email'] }}" required>
+
+            <label for="endereco">Endereço:</label>
+            <input type="text" id="endereco" name="endereco" value="{{ jovem['endereco'] }}">
+
+            <label for="data_nascimento">Data de Nascimento:</label>
+            <input type="date" id="data_nascimento" name="data_nascimento" value="{{ jovem['data_nascimento'] }}">
+
+            <button type="submit" class="btn">Atualizar</button>
+        </form>
+
+        <div class="links">
+            <a href="{{ url_for('dashboard') }}" class="btn-secondary">Voltar ao Dashboard</a>
+            <a href="{{ url_for('listar_jovens') }}" class="btn-secondary">Voltar à Lista</a>
+        </div>
+    </div>
+</body>
+</html>
