@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastrar Jovem</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Cadastrar Jovem</h1>
+
+        <form method="POST" action="{{ url_for('cadastrar_jovem') }}">
+            <label>Nome:</label>
+            <input type="text" name="nome" required><br>
+
+            <label>Telefone:</label>
+            <input type="text" name="telefone" required><br>
+
+            <label>Email:</label>
+            <input type="email" name="email" required><br>
+
+            <label>Endereço:</label>
+            <input type="text" name="endereco" required><br>
+
+            <label>Nascimento:</label>
+            <input type="date" name="nascimento" required><br>
+
+            <button type="submit" class="btn">Cadastrar</button>
+        </form>
+
+        <div style="margin-top:20px;">
+            <a href="{{ url_for('dashboard') }}" class="btn">Voltar ao Dashboard</a>
+            <a href="{{ url_for('logout') }}" class="btn">Sair</a>
+        </div>
+    </div>
+</body>
+</html>
