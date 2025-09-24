@@ -4,42 +4,108 @@
     <meta charset="UTF-8">
     <title>Jovens Cadastrados</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* Estilo extra apenas para os botões de ação */
+        .btn {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 2px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .btn.excluir {
+            background-color: #f44336;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        @media (max-width: 768px) {
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+
+            tr {
+                margin-bottom: 15px;
+            }
+
+            td {
+                text-align: right;
+                padding-left: 50%;
+                position: relative;
+            }
+
+            td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 0;
+                width: 50%;
+                padding-left: 10px;
+                font-weight: bold;
+                text-align: left;
+            }
+
+            th {
+                display: none;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Jovens Cadastrados</h2>
+<div class="container">
+    <h2>Jovens Cadastrados</h2>
+    <a href="{{ url_for('dashboard') }}" class="btn">Voltar ao Dashboard</a>
+    <a href="{{ url_for('logout') }}" class="btn">Sair</a>
 
-        {% if jovens %}
-            <table style="width:100%; border-collapse: collapse;">
-                <thead>
-                    <tr>
-                        <th style="border:1px solid #ddd; padding:8px;">Nome</th>
-                        <th style="border:1px solid #ddd; padding:8px;">Telefone</th>
-                        <th style="border:1px solid #ddd; padding:8px;">Email</th>
-                        <th style="border:1px solid #ddd; padding:8px;">Endereço</th>
-                        <th style="border:1px solid #ddd; padding:8px;">Nascimento</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for jovem in jovens %}
-                    <tr>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.nome }}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.telefone }}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.email }}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.endereco }}</td>
-                        <td style="border:1px solid #ddd; padding:8px;">{{ jovem.data_nascimento }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>Nenhum jovem cadastrado ainda.</p>
-        {% endif %}
-
-        <div style="margin-top: 20px;">
-            <a href="{{ url_for('dashboard') }}" class="btn">Voltar ao Dashboard</a>
-            <a href="{{ url_for('logout') }}" class="btn">Sair</a>
-        </div>
-    </div>
+    {% if jovens %}
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Telefone</th>
+                <th>Email</th>
+                <th>Endereço</th>
+                <th>Data de Nascimento</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for jovem in jovens %}
+            <tr>
+                <td data-label="Nome">{{ jovem['nome'] }}</td>
+                <td data-label="Telefone">{{ jovem['telefone'] }}</td>
+                <td data-label="Email">{{ jovem['email'] }}</td>
+                <td data-label="Endereço">{{ jovem['endereco'] }}</td>
+                <td data-label="Nascimento">{{ jovem['data_nascimento'] }}</td>
+                <td data-label="Ações">
+                    <a href="{{ url_for('editar_jovem', id=jovem['id']) }}" class="btn">Editar</a>
+                    <a href="{{ url_for('excluir_jovem', id=jovem['id']) }}" class="btn excluir">Excluir</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p>Nenhum jovem cadastrado.</p>
+    {% endif %}
+</div>
 </body>
 </html>
