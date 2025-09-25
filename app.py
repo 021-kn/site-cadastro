@@ -150,6 +150,10 @@ def excluir_jovem(id):
         flash("Jovem excluído com sucesso!")
     return redirect(url_for("listar_jovens"))
 
+# -------------------- CRIAR TABELAS --------------------
+with app.app_context():
+    db.create_all()
+
 # -------------------- RODAR APP --------------------
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
