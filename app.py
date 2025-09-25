@@ -12,35 +12,41 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 # -------------------- BANCO DE DADOS --------------------
 def get_db_connection():
-    conn = psycopg2.connect(DATABASE_URL, sslmode="require")
-    return conn
+    return psycopg2.connect(DATABASE_URL, sslmode="require")
 
 def init_db():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS usuarios (
-            id SERIAL PRIMARY KEY,
-            nome TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            senha TEXT NOT NULL,
-            data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS jovens (
-            id SERIAL PRIMARY KEY,
-            nome TEXT NOT NULL,
-            telefone TEXT,
-            email TEXT,
-            endereco TEXT,
-            data_nascimento TEXT
-        )
-    """)
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # Cria tabelas apenas se não existirem
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id SERIAL PRIMARY KEY,
+                nome TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                senha TEXT NOT NULL,
+                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS jovens (
+                id SERIAL PRIMARY KEY,
+                nome TEXT NOT NULL,
+                telefone TEXT,
+                email TEXT,
+                endereco TEXT,
+                data_nascimento TEXT
+            )
+        """)
+        conn.commit()
+    except Exception as e:
+        print("Erro ao inicializar o banco:", e)
+    finally:
+        if conn:
+            cursor.close()
+            conn.close()
 
+# Inicializa as tabelas (não recria banco)
 init_db()
 
 # -------------------- DECORATOR LOGIN REQUIRED --------------------
