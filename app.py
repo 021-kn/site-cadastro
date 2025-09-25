@@ -1,63 +1,41 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-import psycopg2
-import psycopg2.extras
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 import os
+from functools import wraps
 
+# -------------------- CONFIG --------------------
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "fallback123")
 
-# URL do banco do Render
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Pega URL do banco do Render (já configurada no Environment Variables)
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://")
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# -------------------- BANCO DE DADOS --------------------
-def get_db_connection():
-    try:
-        conn = psycopg2.connect(DATABASE_URL, sslmode="require")
-        return conn
-    except Exception as e:
-        print("Erro ao conectar ao banco:", e)
-        return None
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
-def init_db():
-    conn = get_db_connection()
-    if conn:
-        try:
-            cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS usuarios (
-                    id SERIAL PRIMARY KEY,
-                    nome TEXT NOT NULL,
-                    email TEXT UNIQUE NOT NULL,
-                    senha TEXT NOT NULL,
-                    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS jovens (
-                    id SERIAL PRIMARY KEY,
-                    nome TEXT NOT NULL,
-                    telefone TEXT,
-                    email TEXT,
-                    endereco TEXT,
-                    data_nascimento TEXT
-                )
-            """)
-            conn.commit()
-            cursor.close()
-            print("Banco inicializado com sucesso ✅")
-        except Exception as e:
-            print("Erro ao inicializar o banco:", e)
-        finally:
-            conn.close()
-    else:
-        print("Não foi possível inicializar o banco. Conexão falhou ❌")
+# -------------------- MODELS --------------------
+class Usuario(db.Model):
+    __tablename__ = "usuarios"
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(150), nullable=False)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    senha = db.Column(db.String(200), nullable=False)
+    data_criacao = db.Column(db.DateTime, server_default=db.func.now())
 
-init_db()
+class Jovem(db.Model):
+    __tablename__ = "jovens"
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(150), nullable=False)
+    telefone = db.Column(db.String(50))
+    email = db.Column(db.String(150))
+    endereco = db.Column(db.String(200))
+    data_nascimento = db.Column(db.String(50))
 
-# -------------------- DECORATOR LOGIN REQUIRED --------------------
+# -------------------- LOGIN REQUIRED --------------------
 def login_required(f):
-    from functools import wraps
     @wraps(f)
     def wrap(*args, **kwargs):
         if "usuario" not in session:
@@ -73,26 +51,14 @@ def login():
         email = request.form["email"]
         senha = request.form["senha"]
 
-        conn = get_db_connection()
-        if conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-            cursor.execute("SELECT senha, nome FROM usuarios WHERE email=%s", (email,))
-            usuario = cursor.fetchone()
-            cursor.close()
-            conn.close()
+        usuario = Usuario.query.filter_by(email=email).first()
 
-            if usuario:
-                senha_armazenada, nome = usuario
-                if check_password_hash(senha_armazenada, senha):
-                    session["usuario"] = email
-                    session["nome"] = nome
-                    return redirect(url_for("dashboard"))
-                else:
-                    flash("Senha incorreta!")
-            else:
-                flash("Usuário não encontrado!")
+        if usuario and check_password_hash(usuario.senha, senha):
+            session["usuario"] = usuario.email
+            session["nome"] = usuario.nome
+            return redirect(url_for("dashboard"))
         else:
-            flash("Erro de conexão com o banco.")
+            flash("E-mail ou senha incorretos!")
     return render_template("login.html")
 
 # -------------------- REGISTER --------------------
@@ -103,35 +69,22 @@ def register():
         email = request.form["email"]
         senha = generate_password_hash(request.form["senha"])
 
-        conn = get_db_connection()
-        if conn:
-            cursor = conn.cursor()
-            try:
-                cursor.execute("INSERT INTO usuarios (nome, email, senha) VALUES (%s, %s, %s)", (nome, email, senha))
-                conn.commit()
-                flash("Cadastro realizado com sucesso!")
-                return redirect(url_for("login"))
-            except:
-                flash("E-mail já cadastrado!")
-            finally:
-                cursor.close()
-                conn.close()
-        else:
-            flash("Erro de conexão com o banco.")
+        try:
+            novo_usuario = Usuario(nome=nome, email=email, senha=senha)
+            db.session.add(novo_usuario)
+            db.session.commit()
+            flash("Cadastro realizado com sucesso!")
+            return redirect(url_for("login"))
+        except:
+            db.session.rollback()
+            flash("E-mail já cadastrado!")
     return render_template("register.html")
 
 # -------------------- DASHBOARD --------------------
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    conn = get_db_connection()
-    jovens = []
-    if conn:
-        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        cursor.execute("SELECT * FROM jovens")
-        jovens = cursor.fetchall()
-        cursor.close()
-        conn.close()
+    jovens = Jovem.query.all()
     return render_template("dashboard.html", nome=session["nome"], jovens=jovens)
 
 # -------------------- LOGOUT --------------------
@@ -140,94 +93,61 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# -------------------- CADASTRO DE JOVENS --------------------
+# -------------------- CADASTRAR JOVEM --------------------
 @app.route("/cadastrar_jovem", methods=["GET", "POST"])
 @login_required
 def cadastrar_jovem():
     if request.method == "POST":
-        nome = request.form["nome"]
-        telefone = request.form["telefone"]
-        email = request.form["email"]
-        endereco = request.form["endereco"]
-        data_nascimento = request.form["data_nascimento"]
-
-        conn = get_db_connection()
-        if conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO jovens (nome, telefone, email, endereco, data_nascimento)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (nome, telefone, email, endereco, data_nascimento))
-            conn.commit()
-            cursor.close()
-            conn.close()
-            flash("Jovem cadastrado com sucesso!")
-            return redirect(url_for("dashboard"))
-        else:
-            flash("Erro de conexão com o banco.")
+        jovem = Jovem(
+            nome=request.form["nome"],
+            telefone=request.form["telefone"],
+            email=request.form["email"],
+            endereco=request.form["endereco"],
+            data_nascimento=request.form["data_nascimento"]
+        )
+        db.session.add(jovem)
+        db.session.commit()
+        flash("Jovem cadastrado com sucesso!")
+        return redirect(url_for("dashboard"))
     return render_template("cadastrar_jovem.html")
 
 # -------------------- LISTAR JOVENS --------------------
 @app.route("/listar_jovens")
 @login_required
 def listar_jovens():
-    conn = get_db_connection()
-    jovens = []
-    if conn:
-        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        cursor.execute("SELECT * FROM jovens")
-        jovens = cursor.fetchall()
-        cursor.close()
-        conn.close()
+    jovens = Jovem.query.all()
     return render_template("listar_jovens.html", jovens=jovens)
 
 # -------------------- EDITAR JOVEM --------------------
 @app.route("/editar_jovem/<int:id>", methods=["GET", "POST"])
 @login_required
 def editar_jovem(id):
-    conn = get_db_connection()
-    jovem = None
-    if conn:
-        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        cursor.execute("SELECT * FROM jovens WHERE id=%s", (id,))
-        jovem = cursor.fetchone()
-        if request.method == "POST":
-            nome = request.form["nome"]
-            telefone = request.form["telefone"]
-            email = request.form["email"]
-            endereco = request.form["endereco"]
-            data_nascimento = request.form["data_nascimento"]
-
-            cursor.execute("""
-                UPDATE jovens
-                SET nome=%s, telefone=%s, email=%s, endereco=%s, data_nascimento=%s
-                WHERE id=%s
-            """, (nome, telefone, email, endereco, data_nascimento, id))
-            conn.commit()
-            flash("Jovem atualizado com sucesso!")
-            return redirect(url_for("listar_jovens"))
-
-        cursor.close()
-        conn.close()
+    jovem = Jovem.query.get(id)
     if not jovem:
         flash("Jovem não encontrado!")
         return redirect(url_for("listar_jovens"))
+
+    if request.method == "POST":
+        jovem.nome = request.form["nome"]
+        jovem.telefone = request.form["telefone"]
+        jovem.email = request.form["email"]
+        jovem.endereco = request.form["endereco"]
+        jovem.data_nascimento = request.form["data_nascimento"]
+        db.session.commit()
+        flash("Jovem atualizado com sucesso!")
+        return redirect(url_for("listar_jovens"))
+
     return render_template("editar_jovem.html", jovem=jovem)
 
 # -------------------- EXCLUIR JOVEM --------------------
 @app.route("/excluir_jovem/<int:id>")
 @login_required
 def excluir_jovem(id):
-    conn = get_db_connection()
-    if conn:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM jovens WHERE id=%s", (id,))
-        conn.commit()
-        cursor.close()
-        conn.close()
+    jovem = Jovem.query.get(id)
+    if jovem:
+        db.session.delete(jovem)
+        db.session.commit()
         flash("Jovem excluído com sucesso!")
-    else:
-        flash("Erro de conexão com o banco.")
     return redirect(url_for("listar_jovens"))
 
 # -------------------- RODAR APP --------------------
