@@ -10,7 +10,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "fallback123")
 
 # Pega URL do banco do Render (já configurada no Environment Variables)
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL").replace("postgres://", "postgresql://")
+app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql+psycopg2://site_cadastro_db_user:OwOjfgF4i7cFdmAgXaN7bdSg2ebylq2z@dpg-d3a9vp24d50c73d3qtpg-a.oregon-postgres.render.com:5432/site_cadastro_db_bc15"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
