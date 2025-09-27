@@ -4,12 +4,13 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import os
 from functools import wraps
+from datetime import date, datetime
 
 # -------------------- CONFIG --------------------
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "fallback123")
 
-# Pega URL do banco do Render (já configurada no Environment Variables)
+# Banco no Render
 app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql+psycopg2://site_cadastro_db_user:OwOjfgF4i7cFdmAgXaN7bdSg2ebylq2z@dpg-d3a9vp24d50c73d3qtpg-a.oregon-postgres.render.com:5432/site_cadastro_db_bc15"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -33,6 +34,15 @@ class Jovem(db.Model):
     email = db.Column(db.String(150))
     endereco = db.Column(db.String(200))
     data_nascimento = db.Column(db.String(50))
+
+class Presenca(db.Model):
+    __tablename__ = "presencas"
+    id = db.Column(db.Integer, primary_key=True)
+    jovem_id = db.Column(db.Integer, db.ForeignKey("jovens.id"), nullable=False)
+    data_culto = db.Column(db.Date, nullable=False, default=date.today)
+    presente = db.Column(db.Boolean, nullable=False)
+
+    jovem = db.relationship("Jovem", backref=db.backref("presencas", lazy=True))
 
 # -------------------- LOGIN REQUIRED --------------------
 def login_required(f):
@@ -149,6 +159,124 @@ def excluir_jovem(id):
         db.session.commit()
         flash("Jovem excluído com sucesso!")
     return redirect(url_for("listar_jovens"))
+
+# -------------------- REGISTRAR PRESENÇA --------------------
+@app.route("/registrar_presenca", methods=["GET", "POST"])
+@login_required
+def registrar_presenca():
+    jovens = Jovem.query.all()
+
+    if request.method == "POST":
+        data_culto = datetime.strptime(request.form["data_culto"], "%Y-%m-%d").date()
+        presencas_ids = request.form.getlist("presente")
+
+        # Apaga registros do dia para evitar duplicatas
+        Presenca.query.filter_by(data_culto=data_culto).delete()
+
+        # Adiciona presenças de todos os jovens
+        for jovem in jovens:
+            presente = str(jovem.id) in presencas_ids
+            nova_presenca = Presenca(
+                jovem_id=jovem.id,
+                data_culto=data_culto,
+                presente=presente
+            )
+            db.session.add(nova_presenca)
+
+        db.session.commit()
+        flash("Presenças registradas com sucesso!")
+        return redirect(url_for("dashboard"))
+
+    return render_template("registrar_presenca.html", jovens=jovens)
+
+# -------------------- CONSULTAR PRESENÇAS --------------------
+@app.route("/consultar_presencas")
+@login_required
+def consultar_presencas():
+    # Pega apenas presenças marcadas como presente=True
+    presencas = (
+        db.session.query(Presenca, Jovem)
+        .join(Jovem, Presenca.jovem_id == Jovem.id)
+        .filter(Presenca.presente == True)
+        .order_by(Presenca.data_culto.desc(), Jovem.nome)
+        .all()
+    )
+
+    presencas_grouped = {}
+    for presenca, jovem in presencas:
+        data_formatada = presenca.data_culto.strftime("%d/%m/%Y")
+        if data_formatada not in presencas_grouped:
+            presencas_grouped[data_formatada] = []
+        presencas_grouped[data_formatada].append({
+            "id": presenca.id,
+            "nome": jovem.nome,
+            "presente": presenca.presente
+        })
+
+    return render_template("consultar_presencas.html", presencas_grouped=presencas_grouped)
+
+# -------------------- EDITAR PRESENÇAS POR DIA --------------------
+@app.route("/editar_presenca/<data_culto>", methods=["GET", "POST"])
+@login_required
+def editar_presenca(data_culto):
+    data_culto = data_culto.replace("-", "/")
+    data_obj = datetime.strptime(data_culto, "%d/%m/%Y").date()
+    presencas = Presenca.query.filter_by(data_culto=data_obj).all()
+    jovens = Jovem.query.all()
+
+    if request.method == "POST":
+        presencas_ids = request.form.getlist("presente")
+
+        # Atualiza presenças existentes ou cria novas se não houver
+        for jovem in jovens:
+            presenca = next((p for p in presencas if p.jovem_id == jovem.id), None)
+            presente = str(jovem.id) in presencas_ids
+            if presenca:
+                presenca.presente = presente
+            else:
+                nova_presenca = Presenca(
+                    jovem_id=jovem.id,
+                    data_culto=data_obj,
+                    presente=presente
+                )
+                db.session.add(nova_presenca)
+
+        db.session.commit()
+        flash("Presenças atualizadas com sucesso!")
+        return redirect(url_for("consultar_presencas"))
+
+    jovens_status = []
+    for jovem in jovens:
+        presenca = next((p for p in presencas if p.jovem_id == jovem.id), None)
+        jovens_status.append({
+            "id": jovem.id,
+            "nome": jovem.nome,
+            "presente": presenca.presente if presenca else False
+        })
+
+    return render_template("editar_presenca.html", jovens_status=jovens_status, data_culto=data_culto)
+
+# -------------------- EXCLUIR TODAS AS PRESENÇAS DE UM DIA --------------------
+@app.route("/excluir_dia/<data>", methods=["POST"])
+@login_required
+def excluir_dia(data):
+    data = data.replace("-", "/")
+    try:
+        data_formatada = datetime.strptime(data, "%d/%m/%Y").date()
+    except ValueError:
+        flash("Data inválida!")
+        return redirect(url_for("consultar_presencas"))
+
+    presencas = Presenca.query.filter_by(data_culto=data_formatada).all()
+    if presencas:
+        for p in presencas:
+            db.session.delete(p)
+        db.session.commit()
+        flash(f"Todas as presenças do dia {data_formatada.strftime('%d/%m/%Y')} foram excluídas.")
+    else:
+        flash("Nenhuma presença encontrada para essa data.")
+
+    return redirect(url_for("consultar_presencas"))
 
 # -------------------- CRIAR TABELAS --------------------
 with app.app_context():
