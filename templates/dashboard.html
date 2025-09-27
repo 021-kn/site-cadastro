@@ -1,17 +1,22 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Juventude</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<div class="container">
-    <h2>Bem-vindo, {{ nome }}!</h2>
-    <a href="{{ url_for('cadastrar_jovem') }}" class="btn">Cadastrar Jovem</a>
-    <a href="{{ url_for('listar_jovens') }}" class="btn">Ver Lista de Jovens</a>
-    <a href="{{ url_for('logout') }}" class="btn logout">Sair</a>
-</div>
+    <div class="container">
+        <h2>Bem-vindo, {{ nome }}!</h2>
+        <p>O que você deseja fazer?</p>
+
+        <!-- Botões principais -->
+        <a href="{{ url_for('cadastrar_jovem') }}" class="btn">Cadastrar Jovem</a>
+        <a href="{{ url_for('listar_jovens') }}" class="btn">Listar Jovens</a>
+        <a href="{{ url_for('registrar_presenca') }}" class="btn">Registrar Presença</a>
+        <a href="{{ url_for('consultar_presencas') }}" class="btn">Consultar Presenças</a>
+        <a href="{{ url_for('logout') }}" class="btn logout">Sair</a>
+    </div>
 </body>
 </html>
