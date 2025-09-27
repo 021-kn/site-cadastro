@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Presenças</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .jovem-lista {
+            margin-top: 15px;
+        }
+        .jovem-item {
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 6px;
+            background: #f5f5ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .jovem-item input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+        .jovem-item label {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Editar Presenças - Culto em {{ data_culto }}</h2>
+        <a href="{{ url_for('consultar_presencas') }}" class="btn">Voltar</a>
+
+        <form method="POST">
+            <div class="jovem-lista">
+                {% for jovem in jovens_status %}
+                <div class="jovem-item">
+                    <input type="checkbox" id="jovem{{ jovem.id }}" name="presente" value="{{ jovem.id }}"
+                           {% if jovem.presente %} checked {% endif %}>
+                    <label for="jovem{{ jovem.id }}">{{ jovem.nome }}</label>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn">Salvar Alterações</button>
+        </form>
+    </div>
+</body>
+</html>
