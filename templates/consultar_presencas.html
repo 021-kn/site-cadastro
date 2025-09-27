@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultar Presenças</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .culto-box {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background: #f9f9ff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .culto-box h3 {
+            color: #4B0082;
+            margin-bottom: 10px;
+        }
+        .culto-box .actions {
+            margin-top: 10px;
+        }
+        .culto-box .actions .btn {
+            display: block;
+            margin: 5px 0;
+            width: fit-content;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Presenças Registradas</h2>
+        <a href="{{ url_for('dashboard') }}" class="btn">Voltar</a>
+
+        {% if presencas_grouped %}
+            {% for data, lista in presencas_grouped.items() %}
+            <div class="culto-box">
+                <h3>Culto em {{ data }}</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome do Jovem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for presenca in lista %}
+                        <tr>
+                            <td>{{ presenca.nome }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="actions">
+                    <!-- Editar todas as presenças do dia -->
+                    <a href="{{ url_for('editar_presenca', data_culto=data.replace('/', '-')) }}" class="btn small">Editar</a>
+
+                    <!-- Excluir todas as presenças do dia -->
+                    <form action="{{ url_for('excluir_dia', data=data.replace('/', '-')) }}" method="POST"
+                          onsubmit="return confirm('Tem certeza que deseja excluir todas as presenças deste dia?');">
+                        <button type="submit" class="btn small delete">Excluir</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>Nenhuma presença registrada ainda.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
