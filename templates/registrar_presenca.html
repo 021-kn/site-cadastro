@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Registrar Presença</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f9f9ff;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        h2, h3 {
+            color: #4B0082;
+        }
+        .btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 15px;
+            background-color: #4B0082;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #6a1fa1;
+        }
+        label {
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Registrar Presença</h2>
+
+    <form method="POST">
+        <label>Data do Culto:</label>
+        <input type="date" name="data_culto" required>
+
+        <h3>Selecione os jovens presentes:</h3>
+        {% for jovem in jovens %}
+            <input type="checkbox" name="presente" value="{{ jovem.id }}">
+            <label>{{ jovem.nome }}</label><br>
+        {% endfor %}
+
+        <button type="submit" class="btn">Salvar Presenças</button>
+    </form>
+
+    <a href="{{ url_for('dashboard') }}" class="btn">Voltar</a>
+</div>
+</body>
+</html>
